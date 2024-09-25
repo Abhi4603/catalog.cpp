@@ -1,77 +1,64 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <map>
-#include <nlohmann/json.hpp>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
-using namespace std;
-using json = nlohmann::json;
+// Function to decode the value from the given base
+long long decodeValue(const char *value, int base) {
+    return strtoll(value, NULL, base);
+}
 
-long long convertToDecimal(const string& value, int base) {
-    long long result = 0;
-    long long multiplier = 1;
-    for (int i = value.size() - 1; i >= 0; --i) {
-        char digit = value[i];
-        int digitValue;
-        if (digit >= '0' && digit <= '9') {
-            digitValue = digit - '0';
-        } else {
-            digitValue = digit - 'A' + 10;
+// Function to perform Lagrange Interpolation
+double lagrangeInterpolation(int x[], long long y[], int n) {
+    double result = 0;
+
+    for (int i = 0; i < n; i++) {
+        double term = y[i];
+        for (int j = 0; j < n; j++) {
+            if (i != j) {
+                term *= (0 - x[j]) / (double)(x[i] - x[j]);  // f(0) for constant term
+            }
         }
-        result += digitValue * multiplier;
-        multiplier *= base;
+        result += term;
     }
+
     return result;
 }
 
-double lagrangeInterpolation(const map<int, long long>& points) {
-    double constantTerm = 0;
-    
-    for (const auto& p1 : points) {
-        double term = p1.second;
-        for (const auto& p2 : points) {
-            if (p1.first != p2.first) {
-                term *= static_cast<double>(-p2.first) / (p1.first - p2.first);
-            }
-        }
-        constantTerm += term;
-    }
-    
-    return constantTerm;
-}
-
 int main() {
-    ifstream inputFile("testcase.json");
-    json inputJson;
-    inputFile >> inputJson;
+    // First test case data
+    int n1 = 4;
+    int k1 = 3;
+    int x1[] = {1, 2, 3, 6};  // The keys
+    long long y1[] = {
+        decodeValue("4", 10),   
+        decodeValue("111", 2),   
+        decodeValue("12", 10),   
+        decodeValue("213", 4)  
+    };
 
-    map<int, pair<int, string>> input;
-    
-    int n = inputJson["keys"]["n"];
-    int k = inputJson["keys"]["k"];
+    // Second test case data
+    int n2 = 9;
+    int k2 = 6;
+    int x2[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};  // The keys
+    long long y2[] = {
+        decodeValue("28735619723837", 10),  // y1 decoded from base 10
+        decodeValue("1A228867F0CA", 16),   // y2 decoded from base 16
+        decodeValue("32811A4AA0B7B", 12),  // y3 decoded from base 12
+        decodeValue("917978721331A", 11),  // y4 decoded from base 11
+        decodeValue("1A22886782E1", 16),   // y5 decoded from base 16
+        decodeValue("28735619654702", 10), // y6 decoded from base 10
+        decodeValue("71AB5070CC4B", 14),   // y7 decoded from base 14
+        decodeValue("122662581541670", 9), // y8 decoded from base 9
+        decodeValue("642121030037605", 8)  // y9 decoded from base 8
+    };
 
-    for (auto& key : inputJson["keys"].items()) {
-        if (key.key() == "n" || key.key() == "k") continue;
+    // Finding the constant term (c) for both test cases using Lagrange Interpolation
+    double c1 = lagrangeInterpolation(x1, y1, k1);
+    double c2 = lagrangeInterpolation(x2, y2, k2);
 
-        int x = stoi(key.key());
-        int base = stoi(key.value()["base"].get<string>());
-        string value = key.value()["value"];
-        input[x] = {base, value};
-    }
-
-    map<int, long long> points;
-    
-    for (const auto& entry : input) {
-        int x = entry.first;
-        int base = entry.second.first;
-        string value = entry.second.second;
-        long long y = convertToDecimal(value, base);
-        points[x] = y;
-    }
-
-    double constantTerm = lagrangeInterpolation(points);
-
-    cout << "The constant term is: " << constantTerm << endl;
+    // Output the results
+    printf("The constant term (c) for the first test case is: %lf\n", c1);
+    printf("The constant term (c) for the second test case is: %lf\n", c2);
 
     return 0;
 }
