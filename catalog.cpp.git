@@ -1,0 +1,121 @@
+#include <iostream>
+#include <vector>
+#include "json.hpp"
+#include <string>
+#include <cmath>
+// #include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+using namespace std;
+
+long long decode_value(int base, const string& value) {
+    try {
+        return stoll(value, nullptr, base);
+    } catch (const invalid_argument& ia) {
+        cerr << "Error: Invalid argument for stoll: " << value << endl;
+        return 0; // or throw an exception
+    } catch (const out_of_range& oor) {
+        cerr << "Error: Value out of range for stoll: " << value << endl;
+        return 0; // or throw an exception
+    }
+}
+
+double lagrange_interpolation(const vector<pair<int, long long>>& points) {
+    if (points.size() < 2) {
+        cerr << "Error: At least two points are required for Lagrange interpolation." << endl;
+        return 0.0; // or throw an exception
+    }
+
+    auto L = [&](int i, int x) {
+        double num = 1.0;
+        double denom = 1.0;
+        int xi = points[i].first;
+        for (int j = 0; j < points.size(); ++j) {
+            if (i != j) {
+                int xj = points[j].first;
+                num *= (x - xj);
+                denom *= (xi - xj);
+            }
+        }
+        return num / denom;
+    };
+
+    double constant = 0.0;
+    for (int i = 0; i < points.size(); ++i) {
+        int xi = points[i].first;
+        long long yi = points[i].second;
+        constant += yi * L(i, 0);
+    }
+
+    return constant;
+}
+
+double find_secret(const json& json_input) {
+    if (!json_input.contains("keys") || !json_input["keys"].contains("n") || !json_input["keys"].contains("k")) {
+        cerr << "Error: Invalid JSON input. Missing 'keys' or 'n' or 'k' field." << endl;
+        return 0.0; // or throw an exception
+    }
+
+    int n = json_input["keys"]["n"];
+    int k = json_input["keys"]["k"];
+
+    vector<pair<int, long long>> points;
+    for (int i = 1; i <= n; ++i) {
+        string idx = to_string(i);
+        if (json_input.contains(idx)) {
+            int x = i;
+            int base = stoi(json_input[idx]["base"].get<string>());
+            string value = json_input[idx]["value"];
+            long long y = decode_value(base, value);
+            points.push_back({x, y});
+        }
+    }
+
+    if (points.size() < k) {
+        cerr << "Error: Not enough points for Lagrange interpolation. Required " << k << ", got " << points.size() << endl;
+        return 0.0; // or throw an exception
+    }
+
+    // Use only the first 'k' points for interpolation
+    points.resize(k);
+
+    // Find the constant term 'c' using Lagrange interpolation
+    double secret = lagrange_interpolation(points);
+
+    return secret;
+}
+
+int main() {
+    // Sample Test Case 1 (from the problem description)
+    json test_case_1 = {
+        {"keys", {
+            {"n", 5},
+            {"k", 3}
+        }},
+        {"1", {
+            {"base", "10"},
+            {"value", "123"}
+        }},
+        {"2", {
+            {"base", "10"},
+            {"value", "456"}
+        }},
+        {"3", {
+            {"base", "10"},
+            {"value", "789"}
+        }},
+        {"4", {
+            {"base", "10"},
+            {"value", "101"}
+        }},
+        {"5", {
+            {"base", "10"},
+            {"value", "202"}
+        }}
+    };
+
+    double secret = find_secret(test_case_1);
+    cout << "Secret: " << secret << endl;
+
+    return 0;
+}
